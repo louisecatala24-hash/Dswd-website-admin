@@ -1,0 +1,153 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection Test
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+             (request.auth.token != null && request.auth.token.email != null && request.auth.token.email in ['catalaorlandlouise@gmail.com', 'willsonthebuss@gmail.com', 'louise.catala24@gmail.com']) ||
+             (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true)
+      );
+    }
+
+    // Schema Validation Helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'firstName', 'lastName', 'username', 'password', 'mobile', 'birthYear', 'birthMonth', 'birthDay', 'createdAt', 'updatedAt'])
+             && data.uid is string && data.uid.size() <= 128
+             && data.firstName is string && data.firstName.size() <= 100
+             && data.lastName is string && data.lastName.size() <= 100
+             && data.username is string && data.username.size() <= 100
+             && data.password is string && data.password.size() <= 200
+             && data.mobile is string && data.mobile.size() <= 20
+             && data.birthYear is string && data.birthYear.size() <= 10
+             && data.birthMonth is string && data.birthMonth.size() <= 20
+             && data.birthDay is string && data.birthDay.size() <= 10
+             && (data.middleName == null || (data.middleName is string && data.middleName.size() <= 100))
+             && (data.sex == null || (data.sex is string && data.sex in ['Male', 'Female', 'Other']))
+             && (data.civilStatus == null || (data.civilStatus is string && data.civilStatus in ['Single', 'Married', 'Separated']))
+             && (data.address == null || (data.address is string && data.address.size() <= 500))
+             && (data.category == null || (data.category is string))
+             && data.createdAt == request.time
+             && data.updatedAt == request.time;
+    }
+
+    function isValidBenefit(data) {
+      return data.keys().hasAll(['id', 'category', 'titleEn', 'titleFil', 'descEn', 'descFil', 'amount', 'icon', 'color'])
+             && data.id is string && data.id.size() <= 128
+             && data.category is string && data.category in ['solo-parent', 'senior', 'pwd']
+             && data.titleEn is string && data.titleEn.size() <= 200
+             && data.titleFil is string && data.titleFil.size() <= 200
+             && data.descEn is string && data.descEn.size() <= 1000
+             && data.descFil is string && data.descFil.size() <= 1000
+             && data.amount is string && data.amount.size() <= 100
+             && data.icon is string && data.icon.size() <= 100
+             && data.color is string && data.color.size() <= 50;
+    }
+
+    function isValidRequirement(data) {
+       return data.keys().hasAll(['category', 'requirementsEn', 'requirementsFil'])
+              && data.category is string && data.category in ['solo-parent', 'senior', 'pwd']
+              && data.requirementsEn is list
+              && data.requirementsFil is list;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['sender_id', 'sender_name', 'message', 'is_bot'])
+             && data.sender_id is string && data.sender_id.size() <= 128
+             && data.sender_name is string && data.sender_name.size() <= 128
+             && data.message is string && data.message.size() <= 5000
+             && data.is_bot is bool;
+    }
+
+    match /{col}/{doc} {
+      allow read: if col in ["benefits", "benefit-requirements", "News for users", "news_for_users", "DSWD CONTACTS", "images"];
+      allow write: if col in ["benefits", "benefit-requirements", "News for users", "news_for_users", "DSWD CONTACTS", "images"] 
+                   && (isAdmin() || (isSignedIn() && request.auth.token.email in ['catalaorlandlouise@gmail.com', 'willsonthebuss@gmail.com', 'louise.catala24@gmail.com']));
+    }
+
+    match /images/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin() || (isSignedIn() && request.auth.token.email in ['catalaorlandlouise@gmail.com', 'willsonthebuss@gmail.com', 'louise.catala24@gmail.com']);
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAdmin();
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && incoming().get('isAdmin', false) == false; 
+      allow update: if isOwner(userId)
+                    && incoming().updatedAt == request.time
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().get('isAdmin', false) == existing().get('isAdmin', false);
+      allow delete: if false;
+    }
+
+    match /appointments/{appointmentId} {
+      allow read, write: if isAdmin();
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() 
+                    && incoming().userId == request.auth.uid
+                    && (incoming().status == 'Pending' || incoming().status == 'Nakabinbin')
+                    && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status']) && (incoming().status == 'Cancelled' || incoming().status == 'Naka-cancel')
+      );
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid && (existing().status == 'Pending' || existing().status == 'Nakabinbin');
+    }
+
+    match /notifications/{document=**} {
+      allow read, write: if isAdmin();
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn(); 
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid 
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /system/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /messages/{messageId} {
+      allow read, write: if isAdmin();
+      allow get, list: if !isSignedIn() || resource.data.sender_id == request.auth.uid;
+      allow create: if isValidMessage(incoming()) && (
+        (isSignedIn() && incoming().sender_id == request.auth.uid) || !isSignedIn()
+      );
+      allow update, delete: if isAdmin();
+    }
+  }
+}

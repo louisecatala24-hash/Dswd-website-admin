@@ -1,0 +1,6 @@
+{
+  "name": "DSWD Admin Dashboard",
+  "description": "Professional government services management system for DSWD, featuring user management, real-time appointment queues, and secure admin authentication.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

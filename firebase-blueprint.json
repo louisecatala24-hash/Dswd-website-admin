@@ -1,0 +1,143 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered citizen receiving government services",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "mobile": { "type": "string" },
+        "category": { "type": "string", "enum": ["Senior", "PWD", "Solo Parent", "Indigent", "Others"] },
+        "address": { "type": "string" },
+        "civilStatus": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "email", "category"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Service request appointment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "benefitTitle": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["benefitTitle", "date", "status", "userId"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrative user with system access",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "System-wide broadcast message",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "day": { "type": "string" },
+        "time": { "type": "string" },
+        "requirements": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content"]
+    },
+    "Benefit": {
+      "title": "Benefit",
+      "description": "Government benefit or service offered to citizens",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["Senior", "PWD", "Solo Parent", "Indigent", "Others"] },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "category"]
+    },
+    "BenefitRequirement": {
+      "title": "Benefit Requirement",
+      "description": "Documentary or eligibility requirement for a specific benefit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "benefitId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "isRequired": { "type": "boolean" }
+      },
+      "required": ["benefitId", "title"]
+    },
+    "DswdContact": {
+      "title": "DSWD Contact",
+      "description": "DSWD Hotline and regional office directory registration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "position": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of registered citizens"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Queue of benefit appointments"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Whitelist of administrator UIDs"
+    },
+    "News for users/{id}": {
+      "schema": "Announcement",
+      "description": "System-wide broadcast messages for all citizens"
+    },
+    "/benefit/{benefitId}": {
+      "schema": "Benefit",
+      "description": "Collection of available government benefits"
+    },
+    "/benefit-requirments/{requirementId}": {
+      "schema": "BenefitRequirement",
+      "description": "Mandatory documents for specific benefits"
+    },
+    "/system/{id}": {
+      "schema": "object",
+      "description": "System configuration and status metadata"
+    },
+    " DSWD CONTACTS/{id}": {
+      "schema": "DswdContact",
+      "description": "DSWD central, regional and national contact phone lists and hotlines with physical leading space"
+    },
+    "DSWD CONTACTS/{id}": {
+      "schema": "DswdContact",
+      "description": "DSWD central, regional and national contact phone lists and hotlines"
+    }
+  }
+}
